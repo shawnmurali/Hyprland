@@ -1982,6 +1982,12 @@ inline static const std::vector<SConfigOptionDescription> CONFIG_OPTIONS = {
         .type        = CONFIG_OPTION_BOOL,
         .data        = SConfigOptionDescription::SBoolData{false},
     },
+    SConfigOptionDescription{
+        .value       = "master:master_vertical_split",
+        .description = "if enabled, the master area will split vertically (only in orientation left/right)",
+        .type        = CONFIG_OPTION_BOOL,
+        .data        = SConfigOptionDescription::SBoolData{false},
+    },
 
     /*
      * Experimental

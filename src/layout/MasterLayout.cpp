@@ -446,7 +446,7 @@ void CHyprMasterLayout::calculateWorkspace(PHLWORKSPACE pWorkspace) {
         }
     } else if (BMASTERVERTICALSPLIT) {
         const float HEIGHT      = WSSIZE.y;
-        float       widthLeft   = WSSIZE.x * PMASTERNODE->percMaster;
+        float       widthLeft   = STACKWINDOWS > 0 ? WSSIZE.x * PMASTERNODE->percMaster : WSSIZE.x;
         int         mastersLeft = MASTERS;
         float       nextX       = orientation == ORIENTATION_LEFT ? 0 : WSSIZE.x;
         float       nextY       = 0;
@@ -820,7 +820,7 @@ void CHyprMasterLayout::resizeActiveWindow(const Vector2D& pixResize, eRectCorne
     static auto  SLAVECOUNTFORCENTER    = CConfigValue<Hyprlang::INT>("master:slave_count_for_center_master");
     static auto  PSMARTRESIZING         = CConfigValue<Hyprlang::INT>("master:smart_resizing");
     static auto  PMASTERVERTICALSPLIT   = CConfigValue<Hyprlang::INT>("master:master_vertical_split");
-
+    
     const bool   DISPLAYBOTTOM = STICKS(PWINDOW->m_position.y + PWINDOW->m_size.y, PMONITOR->m_position.y + PMONITOR->m_size.y - PMONITOR->m_reservedBottomRight.y);
     const bool   DISPLAYRIGHT  = STICKS(PWINDOW->m_position.x + PWINDOW->m_size.x, PMONITOR->m_position.x + PMONITOR->m_size.x - PMONITOR->m_reservedBottomRight.x);
     const bool   DISPLAYTOP    = STICKS(PWINDOW->m_position.y, PMONITOR->m_position.y + PMONITOR->m_reservedTopLeft.y);
@@ -1303,7 +1303,7 @@ std::any CHyprMasterLayout::layoutMessage(SLayoutMessageHeader header, std::stri
         const auto  MASTERS    = getMastersOnWorkspace(header.pWindow->workspaceID());
         static auto SMALLSPLIT = CConfigValue<Hyprlang::INT>("master:allow_small_split");
 
-        if (MASTERS + 2 > WINDOWS && *SMALLSPLIT == 0)
+        if ((MASTERS + 2 > WINDOWS && *SMALLSPLIT == 0) || (vars[1] != "emancipate"))
             return 0;
 
         g_pCompositor->setWindowFullscreenInternal(header.pWindow, FSMODE_NONE);

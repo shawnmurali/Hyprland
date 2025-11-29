@@ -72,6 +72,11 @@ class CHyprMasterLayout : public IHyprLayout {
     virtual void                     onEnable();
     virtual void                     onDisable();
 
+    // Returns whether the given window is marked as master in this layout.
+    bool                              isWindowMaster(PHLWINDOW pWindow);
+    // Public wrapper to access the node for a window (uses private getNodeFromWindow).
+    SMasterNodeData*                  getNodeForWindow(PHLWINDOW pWindow);
+
   private:
     std::list<SMasterNodeData>        m_masterNodesData;
     std::vector<SMasterWorkspaceData> m_masterWorkspacesData;

@@ -800,6 +800,15 @@ bool CHyprMasterLayout::isWindowTiled(PHLWINDOW pWindow) {
     return getNodeFromWindow(pWindow) != nullptr;
 }
 
+bool CHyprMasterLayout::isWindowMaster(PHLWINDOW pWindow) {
+    const auto PNODE = getNodeFromWindow(pWindow);
+    return PNODE ? PNODE->isMaster : false;
+}
+
+SMasterNodeData* CHyprMasterLayout::getNodeForWindow(PHLWINDOW pWindow) {
+    return getNodeFromWindow(pWindow);
+}
+
 void CHyprMasterLayout::resizeActiveWindow(const Vector2D& pixResize, eRectCorner corner, PHLWINDOW pWindow) {
     const auto PWINDOW = pWindow ? pWindow : Desktop::focusState()->window();
 

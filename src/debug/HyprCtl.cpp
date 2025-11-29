@@ -58,6 +58,8 @@ using namespace Hyprutils::OS;
 #include "../render/Renderer.hpp"
 #include "../render/OpenGL.hpp"
 
+#include "../layout/MasterLayout.hpp"
+
 #if defined(__DragonFly__) || defined(__FreeBSD__)
 #include <sys/ucred.h>
 #define CRED_T   xucred
@@ -204,7 +206,6 @@ std::string CHyprCtl::getMonitorData(Hyprutils::Memory::CSharedPointer<CMonitor>
         return "";
 
     if (format == eHyprCtlOutputFormat::FORMAT_JSON) {
-
         result += std::format(
             R"#({{
     "id": {},
@@ -234,7 +235,7 @@ std::string CHyprCtl::getMonitorData(Hyprutils::Memory::CSharedPointer<CMonitor>
     "focused": {},
     "dpmsStatus": {},
     "vrr": {},
-    "solitary": "{:x}",
+            "solitary": "{:x}",
     "solitaryBlockedBy": {},
     "activelyTearing": {},
     "tearingBlockedBy": {},
@@ -361,6 +362,18 @@ std::string CHyprCtl::getWindowData(PHLWINDOW w, eHyprCtlOutputFormat format) {
         return -1;
     };
 
+    // Determine master status for the window. Default to "none" unless
+    // the active layout is Master and the window is part of its node list.
+    std::string masterStatus = "none";
+    if (g_pLayoutManager && g_pLayoutManager->getCurrentLayout() && g_pLayoutManager->getCurrentLayout()->getLayoutName() == "Master") {
+        if (auto pML = dynamic_cast<CHyprMasterLayout*>(g_pLayoutManager->getCurrentLayout())) {
+            if (pML->isWindowTiled(w))
+                masterStatus = pML->isWindowMaster(w) ? "master" : "slave";
+            else
+                masterStatus = "none";
+        }
+    }
+
     if (format == eHyprCtlOutputFormat::FORMAT_JSON) {
         return std::format(
             R"#({{
@@ -392,7 +405,8 @@ std::string CHyprCtl::getWindowData(PHLWINDOW w, eHyprCtlOutputFormat format) {
     "inhibitingIdle": {},
     "xdgTag": "{}",
     "xdgDescription": "{}",
-    "contentType": "{}"
+    "contentType": "{}",
+    "masterStatus": "{}"
 }},)#",
             rc<uintptr_t>(w.get()), (w->m_isMapped ? "true" : "false"), (w->isHidden() ? "true" : "false"), sc<int>(w->m_realPosition->goal().x),
             sc<int>(w->m_realPosition->goal().y), sc<int>(w->m_realSize->goal().x), sc<int>(w->m_realSize->goal().y), w->m_workspace ? w->workspaceID() : WORKSPACE_INVALID,
@@ -401,7 +415,7 @@ std::string CHyprCtl::getWindowData(PHLWINDOW w, eHyprCtlOutputFormat format) {
             (sc<int>(w->m_isX11) == 1 ? "true" : "false"), (w->m_pinned ? "true" : "false"), sc<uint8_t>(w->m_fullscreenState.internal), sc<uint8_t>(w->m_fullscreenState.client),
             getGroupedData(w, format), getTagsData(w, format), rc<uintptr_t>(w->m_swallowed.get()), getFocusHistoryID(w),
             (g_pInputManager->isWindowInhibiting(w, false) ? "true" : "false"), escapeJSONStrings(w->xdgTag().value_or("")), escapeJSONStrings(w->xdgDescription().value_or("")),
-            escapeJSONStrings(NContentType::toString(w->getContentType())));
+            escapeJSONStrings(NContentType::toString(w->getContentType())), escapeJSONStrings(masterStatus));
     } else {
         return std::format(
             "Window {:x} -> {}:\n\tmapped: {}\n\thidden: {}\n\tat: {},{}\n\tsize: {},{}\n\tworkspace: {} ({})\n\tfloating: {}\n\tpseudo: {}\n\tmonitor: {}\n\tclass: {}\n\ttitle: "

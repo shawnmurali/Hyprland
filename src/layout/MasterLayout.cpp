@@ -351,6 +351,7 @@ void CHyprMasterLayout::calculateWorkspace(PHLWORKSPACE pWorkspace) {
 
     const auto   MASTERS      = getMastersOnWorkspace(pWorkspace->m_id);
     const auto   WINDOWS      = getNodesOnWorkspace(pWorkspace->m_id);
+    const bool   BMASTERVERTICALSPLIT = *PMASTERVERTICALSPLIT && (orientation == ORIENTATION_LEFT || orientation == ORIENTATION_RIGHT); // only use in left/right orientation
     const auto   STACKWINDOWS = WINDOWS - MASTERS;
     const auto   WSSIZE       = PMONITOR->m_size - PMONITOR->m_reservedTopLeft - PMONITOR->m_reservedBottomRight;
     const auto   WSPOS        = PMONITOR->m_position + PMONITOR->m_reservedTopLeft;
@@ -373,7 +374,7 @@ void CHyprMasterLayout::calculateWorkspace(PHLWORKSPACE pWorkspace) {
     }
 
     const float totalSize             = (orientation == ORIENTATION_TOP || orientation == ORIENTATION_BOTTOM) ? WSSIZE.x : WSSIZE.y;
-    const float masterAverageSize     = (*PMASTERVERTICALSPLIT) ? WSSIZE.x / MASTERS : totalSize / MASTERS;
+    const float masterAverageSize     = (BMASTERVERTICALSPLIT) ? WSSIZE.x / MASTERS : totalSize / MASTERS;
     const float slaveAverageSize      = totalSize / STACKWINDOWS;
     float       masterAccumulatedSize = 0;
     float       slaveAccumulatedSize  = 0;
@@ -443,19 +444,20 @@ void CHyprMasterLayout::calculateWorkspace(PHLWORKSPACE pWorkspace) {
             widthLeft -= WIDTH;
             nextX += WIDTH;
         }
-    } else if (*PMASTERVERTICALSPLIT && (orientation == ORIENTATION_LEFT || orientation == ORIENTATION_RIGHT)) {
+    } else if (BMASTERVERTICALSPLIT) {
         const float HEIGHT      = WSSIZE.y;
         float       widthLeft   = WSSIZE.x * PMASTERNODE->percMaster;
         int         mastersLeft = MASTERS;
         float       nextX       = orientation == ORIENTATION_LEFT ? 0 : WSSIZE.x;
         float       nextY       = 0;
-
         for (auto& nd : m_masterNodesData) {
             if (nd.workspaceID != pWorkspace->m_id || !nd.isMaster)
                 continue;
-            float WIDTH = mastersLeft > 1 ? WSSIZE.x / MASTERS * nd.percSize : WSSIZE.x;
+            float WIDTH = mastersLeft > 1 ? widthLeft / mastersLeft : widthLeft;
+
             if (WIDTH > widthLeft * 0.9f && mastersLeft > 1)
                 WIDTH = widthLeft * 0.9;
+                
             if (*PSMARTRESIZING) {
                 nd.percSize *= WSSIZE.x / masterAccumulatedSize;
                 WIDTH = masterAverageSize * nd.percSize;
@@ -476,7 +478,6 @@ void CHyprMasterLayout::calculateWorkspace(PHLWORKSPACE pWorkspace) {
                 nextX += WIDTH;
             }
         }
-
     } else { // orientation left, right or center
         float WIDTH       = *PIGNORERESERVED && centerMasterWindow ? PMONITOR->m_size.x : WSSIZE.x;
         float heightLeft  = WSSIZE.y;
@@ -552,13 +553,21 @@ void CHyprMasterLayout::calculateWorkspace(PHLWORKSPACE pWorkspace) {
             nextX += WIDTH;
         }
     } else if (orientation == ORIENTATION_LEFT || orientation == ORIENTATION_RIGHT) {
-        const float WIDTH      = WSSIZE.x - PMASTERNODE->size.x;
+        float totalMasterWidth = 0;
+        if (BMASTERVERTICALSPLIT) {
+            for (auto& nd : m_masterNodesData) {
+                if (nd.workspaceID != pWorkspace->m_id || !nd.isMaster)
+                    continue;
+                totalMasterWidth += nd.size.x;
+            }
+        }
+        const float WIDTH      = WSSIZE.x - (BMASTERVERTICALSPLIT ? totalMasterWidth : PMASTERNODE->size.x);
         float       heightLeft = WSSIZE.y;
         float       nextY      = 0;
         float       nextX      = 0;
 
         if (orientation == ORIENTATION_LEFT)
-            nextX = PMASTERNODE->size.x;
+            nextX = BMASTERVERTICALSPLIT ? totalMasterWidth : PMASTERNODE->size.x;
 
         for (auto& nd : m_masterNodesData) {
             if (nd.workspaceID != pWorkspace->m_id || nd.isMaster)
